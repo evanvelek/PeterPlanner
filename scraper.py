@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
+import html
 
 # Seed URL: https://catalogue.uci.edu/undergraduatedegrees/
 SEED_URL = "https://catalogue.uci.edu/undergraduatedegrees/"
@@ -59,14 +60,16 @@ def get_reqs(url):
             desc_url_info = requests.get("https://catalogue.uci.edu" + desc_href, headers=HEADER)
             desc_url_info.raise_for_status()
             soup = BeautifulSoup(desc_url_info.content, 'html.parser')
-
             inside_div = soup.find('div', {'id': 'fssearchresults', 'class':'searchresults'})
+            prereqs = []
             links = inside_div.find_all('p')
             for link in links:
                 text = link.get_text(strip=True)
-                if 'Prerequisite' in text.lower():
-                    reqs.append(text)
-            reqs.append({'code': code, 'description': reqs})
+                if 'prerequisite' in text.lower():
+                    atags = link.find_all('a')
+                    for atag in atags:
+                        prereqs.append(atag.get_text().replace('\xa0', " "))
+            reqs.append({'code': code, 'description': prereqs})
     return reqs
 
     
@@ -76,11 +79,3 @@ if __name__ == '__main__':
     courses = get_reqs(example_url)
     for course in courses:
         print(f"Code: {course['code']}, Description: {course['description']}")
-
-
-
-
-
-
-
-
