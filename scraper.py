@@ -41,41 +41,32 @@ def extract_majors_and_minors():
     return majors, minors
 
 def get_reqs(url):
-    """Extract course requirements from a given URL."""
-    try:
-        url_info = requests.get(url, headers=HEADER)
-        url_info.raise_for_status()
-    except Exception as e:
-        print(f"Error fetching URL {url}: {e}")
-        return []
+    url_info = requests.get(url, headers=HEADER)
+    url_info.raise_for_status()
 
     soup = BeautifulSoup(url_info.content, 'html.parser')
-
-    # Debugging: Print parts of the soup to verify structure
-    print("Debugging: HTML Content (Truncated):")
-    print(soup.prettify()[:1000])  # Print first 1000 characters
-
     reqs = []
 
-    # Check for the course table
     course_table = soup.find('table', class_="sc_courselist")
-    if not course_table:
-        print("No course table found on the page.")
-        return reqs
-
-    # Extract rows from the course table
     rows = course_table.find_all('tr')
     for row in rows:
         code_cell = row.find('td', class_="codecol")
-        desc_cell = row.find('td', class_="descriptioncol")
-
-        if code_cell and desc_cell:
+        if code_cell:
             code = code_cell.get_text(strip=True)
-            description = desc_cell.get_text(strip=True)
-            reqs.append({'code': code, 'description': description})
+            
+            a_tag = code_cell.find('a')
+            desc_href = a_tag.get('href')
+            desc_url_info = requests.get("https://catalogue.uci.edu" + desc_href, headers=HEADER)
+            desc_url_info.raise_for_status()
+            soup = BeautifulSoup(desc_url_info.content, 'html.parser')
 
-    if not reqs:
-        print("No requirements found in the course table.")
+            inside_div = soup.find('div', {'id': 'fssearchresults', 'class':'searchresults'})
+            links = inside_div.find_all('p')
+            for link in links:
+                text = link.get_text(strip=True)
+                if 'Prerequisite' in text.lower():
+                    reqs.append(text)
+            reqs.append({'code': code, 'description': reqs})
     return reqs
 
     
