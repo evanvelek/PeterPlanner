@@ -46,13 +46,33 @@ def get_reqs(url):
     url_info.raise_for_status()
 
     soup = BeautifulSoup(url_info.content, 'html.parser')
+
+    # Debugging: Print parts of the soup to verify structure
+    # print("Debugging: HTML Content (Truncated):")
+    # print(soup.prettify()[:1000])  # Print first 1000 characters
+
     reqs = []
 
     course_table = soup.find('table', class_="sc_courselist")
-    rows = course_table.find_all('tr')
+    if not course_table:
+        print("No course table found on the page.")
+        return reqs
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        reqs = list(executor.map(process_row, rows))
+
+    # Extract rows from the course table
+    rows = course_table.find_all('tr')
+    print(rows)
+    for row in rows:
+        code_cell = row.find('td', class_="codecol")
+        desc_cell = row.find('td', class_="descriptioncol")
+
+        if code_cell and desc_cell:
+            code = code_cell.get_text(strip=True)
+            description = desc_cell.get_text(strip=True)
+            reqs.append({'code': code, 'description': description})
+
+    if not reqs:
+        print("No requirements found in the course table.")
     return reqs
     
 def process_row(row):
